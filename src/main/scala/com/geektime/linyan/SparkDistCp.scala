@@ -5,7 +5,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.hadoop.fs.{FileSystem, FileUtil, Path}
 import org.apache.hadoop.conf.Configuration
 
-import scala.collection.mutable.{ArrayBuffer}
+import scala.collection.mutable.ArrayBuffer
 
 object SparkDistCp extends Serializable {
 
@@ -24,33 +24,42 @@ object SparkDistCp extends Serializable {
       | -m 同时copy的最大并发task数"""
 
 //  @transient private val conf = new SparkConf().setAppName("SparkDistCp").setMaster("local[*]")
-  @transient private val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
-  @transient private val sc = session.sparkContext
-  @transient private val hadoopConf = sc.hadoopConfiguration
-  @transient private val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
-  @transient private val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
-  println(fsURI)
+//  @transient private val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+//  @transient private val sc = session.sparkContext
+//  @transient private val hadoopConf = sc.hadoopConfiguration
+//  @transient private val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
+//  @transient private val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
 
-//  var sourcePath = "hdfs://localhost:9000/input"
-  var sourcePath = "file:/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/input"
-//  var targetPath = "/output_test4"
-  var targetPath = "/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/output_test1"
+  var sourcePath = "hdfs://localhost:9000/linyan"
+//  var sourcePath = "file:/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/input"
+  var targetPath = "/output_test4"
+//  var targetPath = "/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/output_test1"
+
+  class ConfigSerDeser(var conf: Configuration) extends Serializable {
+    def this() {
+      this(new Configuration())
+    }
+    def get(): Configuration = conf
+  }
 
   def main(args: Array[String]): Unit = {
+
+    val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+//    val sc = session.sparkContext
 //    val conf = new SparkConf()
 //    conf.setAppName("SparkDistCp") // 设置Spark应用名
 //    conf.setMaster("local[*]") // 设置本地模式
 //    val sc = new SparkContext(conf)
 //    val hadoopConf = sc.hadoopConfiguration
-//    val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
-//    val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
+    val fs = new Path(sourcePath).getFileSystem(session.sparkContext.hadoopConfiguration) //获取Spark关联的Hadoop的FileSystem
+    val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
     // 解析参数
 //    parseArgs(args)
 
-    val fileListCopy = checkDirectory(new Path(sourcePath), fs, new Path(sourcePath), new Path(targetPath))
+    val fileListCopy = checkDirectory(new Path(sourcePath), fs, new Path(sourcePath), new Path(targetPath), session.sparkContext)
     fileListCopy.foreach(println)
     val fileStrList = fileList.map((x) => (x._1.toString, fsURI + x._2.toString))
-    val rdd = sc.makeRDD(fileStrList, maxConcurrence)
+    val rdd = session.sparkContext.makeRDD(fileStrList, maxConcurrence)
 //    val rddSC = session.sparkContext
     val serConfig = new ConfigSerDeser(rdd.sparkContext.hadoopConfiguration)
     val rdd2 = rdd.mapPartitions(value => {
@@ -75,7 +84,7 @@ object SparkDistCp extends Serializable {
       }
       res.iterator
     }).foreach(println)
-    sc.stop()
+    session.sparkContext.stop()
   }
 
   def listDirectory(path: Path, hdfs: FileSystem): ArrayBuffer[String] = {
@@ -94,8 +103,9 @@ object SparkDistCp extends Serializable {
     dirList.sorted
   }
 
-  def checkDirectory(sourcePath: Path, fs: FileSystem, sourceFullPath: Path, targetPath: Path): ArrayBuffer[(Path, Path)] = {
+  def checkDirectory(sourcePath: Path, fs: FileSystem, sourceFullPath: Path, targetPath: Path, sc: SparkContext): ArrayBuffer[(Path, Path)] = {
     // hdfs.listStatus(path) is an array of FileStatus objects for the files under the given path
+    val fs = sourcePath.getFileSystem(sc.hadoopConfiguration)
     fs.listStatus(sourceFullPath).foreach { status => {
       println(status.getPath.toString)
       val subPath = status.getPath.toString.split(sourcePath.toString)(1)
@@ -106,7 +116,7 @@ object SparkDistCp extends Serializable {
         val dirCreated = fs.mkdirs(new Path(pathStr))
         println(dirCreated)
         val tPathSub = new Path(pathStr)
-        checkDirectory(sourcePath, fs, status.getPath, tPathSub)
+        checkDirectory(sourcePath, fs, status.getPath, tPathSub, sc)
       }
       else {
         fileList.append((status.getPath, new Path(pathStr)))
@@ -116,7 +126,7 @@ object SparkDistCp extends Serializable {
     fileList
   }
 
-  private def parseArgs(args: Array[String]): Unit = {
+def parseArgs(args: Array[String]): Unit = {
 
     val len = args.length
     if (len < numArg) {
@@ -170,11 +180,4 @@ object SparkDistCp extends Serializable {
     }
   }
 
-}
-
-class ConfigSerDeser(var conf: Configuration) extends Serializable {
-  def this() {
-    this(new Configuration())
-  }
-  def get(): Configuration = conf
 }
