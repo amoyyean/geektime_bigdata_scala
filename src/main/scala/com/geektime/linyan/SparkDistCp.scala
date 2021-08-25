@@ -26,9 +26,12 @@ object SparkDistCp {
   @transient private val hadoopConf = sc.hadoopConfiguration
   @transient private val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
   @transient private val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
+  println(fsURI)
 
-  var sourcePath = "hdfs://localhost:9000/input"
-  var targetPath = "/output_test4"
+//  var sourcePath = "hdfs://localhost:9000/input"
+  var sourcePath = "/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/input"
+//  var targetPath = "/output_test4"
+  var targetPath = "/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/output_test1"
 
   def main(args: Array[String]): Unit = {
 //    val conf = new SparkConf()
@@ -44,30 +47,31 @@ object SparkDistCp {
 //    val (src, dest) = config.sourceAndDestPaths
     // 解析参数
 //    parseArgs(args)
-    checkDirectory(new Path(sourcePath), fs, new Path(targetPath))
-//    val fileStrList = fileList.map((s) => (s._1.toString(), s._2.toString))
-//    val rdd = sc.makeRDD(fileStrList, maxConcurrence)
-//    val r = rdd.mapPartitions(value => {
-//      var result = ArrayBuffer[String]()
-//      while (value.hasNext) {
-//        val index = value.next()
-//        try {
-//          val flag = FileUtil.copy(fs, new Path(index._1), fs, new Path(index._2), false, hadoopConf)
-//          if (flag) {
-//            result.append(index._1 + "copied to" + index._2 + "successfully.")
-//          }
-//        } catch {
-//          case ex: Exception => {
-//            if ("TRUE".equals(ignoreFailure)) {
-//              println(index._1 + " Copy Failed.")
-//            } else {
-//              System.exit(1)
-//            }
-//          }
-//        }
-//      }
-//      result.iterator
-//    }).foreach(print(_))
+    val fileListCopy = checkDirectory(new Path(sourcePath), fs, new Path(targetPath))
+    fileListCopy.foreach(println)
+    val fileStrList = fileList.map((x) => (x._1.toString, fsURI + x._2.toString))
+    val rdd = sc.makeRDD(fileStrList, maxConcurrence)
+    val rdd2 = rdd.mapPartitions(value => {
+      var res = ArrayBuffer[String]()
+      while (value.hasNext) {
+        val item = value.next()
+        try {
+          val flag = FileUtil.copy(fs, new Path(item._1), fs, new Path(item._2), false, hadoopConf)
+          if (flag) {
+            res.append(item._1 + " copied to " + item._2 + " successfully.")
+          }
+        } catch {
+          case ex: Exception => {
+            if ("TRUE".equals(ignoreFailure)) {
+              println(item._1 + " Copy Failed.")
+            } else {
+              System.exit(1)
+            }
+          }
+        }
+      }
+      res.iterator
+    }).foreach(println)
     sc.stop()
   }
 
@@ -91,10 +95,10 @@ object SparkDistCp {
     // hdfs.listStatus(path) is an array of FileStatus objects for the files under the given path
     fs.listStatus(sourcePath).foreach { status => {
       //getPath returns absolute full path, make sourcePath and targetPath different in recursion
+      println(status.getPath.toString)
       val subPath = status.getPath.toString.split(sourcePath.toString)(1)
       println(subPath)
       val pathStr = targetPath.toString + subPath
-//      val pathStr = targetPath.toString + subPath
       println(pathStr)
       if (status.isDirectory) {
         val dirCreated = fs.mkdirs(new Path(pathStr))
@@ -103,7 +107,7 @@ object SparkDistCp {
         checkDirectory(status.getPath, fs, tPathSub)
       }
       else {
-        fileList.append((status.getPath, targetPath))
+        fileList.append((status.getPath, new Path(pathStr)))
       }
     }
     }
