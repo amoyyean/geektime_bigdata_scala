@@ -24,11 +24,11 @@ object SparkDistCp extends Serializable {
       | -m 同时copy的最大并发task数"""
 
 //  @transient private val conf = new SparkConf().setAppName("SparkDistCp").setMaster("local[*]")
-//  @transient private val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
-//  @transient private val sc = session.sparkContext
-//  @transient private val hadoopConf = sc.hadoopConfiguration
-//  @transient private val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
-//  @transient private val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
+  @transient lazy val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+  @transient lazy val sc = session.sparkContext
+  @transient lazy val hadoopConf = sc.hadoopConfiguration
+  @transient lazy val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
+  @transient lazy val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
 
   var sourcePath = "hdfs://localhost:9000/linyan"
 //  var sourcePath = "file:/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/input"
@@ -44,26 +44,29 @@ object SparkDistCp extends Serializable {
 
   def main(args: Array[String]): Unit = {
 
-    val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+    @transient val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
 //    val sc = session.sparkContext
 //    val conf = new SparkConf()
 //    conf.setAppName("SparkDistCp") // 设置Spark应用名
 //    conf.setMaster("local[*]") // 设置本地模式
 //    val sc = new SparkContext(conf)
 //    val hadoopConf = sc.hadoopConfiguration
-    val fs = new Path(sourcePath).getFileSystem(session.sparkContext.hadoopConfiguration) //获取Spark关联的Hadoop的FileSystem
-    val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
+    @transient val fs = new Path(sourcePath).getFileSystem(session.sparkContext.hadoopConfiguration) //获取Spark关联的Hadoop的FileSystem
+    @transient val fsURI = fs.getUri // 获取Spark关联的Hadoop的FileSystem的URI
     // 解析参数
 //    parseArgs(args)
 
     val fileListCopy = checkDirectory(new Path(sourcePath), fs, new Path(sourcePath), new Path(targetPath), session.sparkContext)
     fileListCopy.foreach(println)
-    val fileStrList = fileList.map((x) => (x._1.toString, fsURI + x._2.toString))
+    @transient val fileStrList = fileList.map((x) => (x._1.toString, fsURI + x._2.toString))
     val rdd = session.sparkContext.makeRDD(fileStrList, maxConcurrence)
 //    val rddSC = session.sparkContext
-    val serConfig = new ConfigSerDeser(rdd.sparkContext.hadoopConfiguration)
-    val rdd2 = rdd.mapPartitions(value => {
-      var res = ArrayBuffer[String]()
+//    @transient val serConfig = new ConfigSerDeser(rdd.sparkContext.hadoopConfiguration)
+    rdd.mapPartitions(value => {
+      val res = ArrayBuffer[String]()
+      val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+      val rddSC = session.sparkContext
+      val serConfig = new ConfigSerDeser(rddSC.hadoopConfiguration)
       while (value.hasNext) {
         val item = value.next()
         val rddFS = new Path(item._1).getFileSystem(serConfig.get())
