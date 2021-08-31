@@ -24,7 +24,7 @@ object SparkDistCp extends Serializable {
       | -m 同时copy的最大并发task数"""
 
 //  @transient private val conf = new SparkConf().setAppName("SparkDistCp").setMaster("local[*]")
-  @transient lazy val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+  lazy val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
   @transient lazy val sc = session.sparkContext
   @transient lazy val hadoopConf = sc.hadoopConfiguration
   @transient lazy val fs = FileSystem.get(hadoopConf) //获取Spark关联的Hadoop的FileSystem
@@ -44,7 +44,7 @@ object SparkDistCp extends Serializable {
 
   def main(args: Array[String]): Unit = {
 
-    @transient val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+//      lazy val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
 //    val sc = session.sparkContext
 //    val conf = new SparkConf()
 //    conf.setAppName("SparkDistCp") // 设置Spark应用名
@@ -64,7 +64,7 @@ object SparkDistCp extends Serializable {
 //    @transient val serConfig = new ConfigSerDeser(rdd.sparkContext.hadoopConfiguration)
     rdd.mapPartitions(value => {
       val res = ArrayBuffer[String]()
-      val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+//      val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
       val rddSC = session.sparkContext
       val serConfig = new ConfigSerDeser(rddSC.hadoopConfiguration)
       while (value.hasNext) {
