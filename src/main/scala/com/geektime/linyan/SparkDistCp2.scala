@@ -1,6 +1,6 @@
 package com.geektime.linyan
 
-import org.apache.hadoop.conf
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 //import org.apache.commons.cli.{DefaultParser, Options}
 import org.apache.hadoop.fs.{FileSystem, FileUtil, Path}
@@ -21,8 +21,8 @@ object SparkDistCp2 {
 //    val sourcePath = "file:/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/input"
 //    val targetPath = "/Users/winchester/IdeaProjects/spark_api_hw/src/main/resources/output_test2"
 
-    val sparkConf = new SparkConf().setAppName(this.getClass.getSimpleName).setMaster("local")
-    val sc = new SparkContext(sparkConf)
+    lazy val session = SparkSession.builder().appName("SparkDistCp").master("local[*]").getOrCreate()
+    val sc = session.sparkContext
 //    sc.setLogLevel("WARN")
     val fs = FileSystem.get(sc.hadoopConfiguration)
     val fsURI = fs.getUri
@@ -33,12 +33,15 @@ object SparkDistCp2 {
     val rdd = sc.makeRDD(fileStrList, maxConcurrence)
     rdd.mapPartitions(value => {
       val res = ArrayBuffer[String]()
-      val conf = new Configuration()
-      val fs = FileSystem.get(conf)
+
+//      val rddFS = FileSystem.get(rddSC.hadoopConfiguration)
+//      val rddConf = new Configuration()
       while (value.hasNext) {
         val item = value.next()
+        val rddSC = session.sparkContext
+        val rddFS = new Path(item._1).getFileSystem(new Configuration(rddSC.hadoopConfiguration))
         try {
-          val flag = FileUtil.copy(fs, new Path(item._1), fs, new Path(item._2), false, conf)
+          val flag = FileUtil.copy(rddFS, new Path(item._1), rddFS, new Path(item._2), false, new Configuration(rddSC.hadoopConfiguration))
           if (flag) {
             res.append(item._1 + " copied to " + item._2 + " successfully.")
           }
