@@ -23,7 +23,7 @@ object RepartitionForInsertion extends Rule[SparkPlan] {
 override def apply(plan: SparkPlan): SparkPlan = {
 plan transformDown {
 case i @ InsertIntoDataSourceExec(child, _, _, partitionColumns, _)
-val newChild = chile.repartition(partitionColumns.map(col): _*)
+val newChild = child.repartition(partitionColumns.map(col): _*)
 i.withNewChildren(newChild :: Nil)
 }
 }
