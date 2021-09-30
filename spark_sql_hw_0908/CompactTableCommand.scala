@@ -31,9 +31,9 @@ case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[Strin
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val table = sparkSession.table(tableName)
     val partitionNum = fileNum match {
-      case None => (sparkSession.sessionState
+      case None => sparkSession.sessionState
         .executePlan(table.logicalPlan)
-        .optimizedPlan.stats.sizeInBytes.toLong./(1024.0)).ceil.toInt
+        .optimizedPlan.stats.sizeInBytes.toLong./(1024.0).ceil.toInt
       case Some(value) => value.toInt
     }
     val tablePartitionNum = Math.max(partitionNum, 1)
@@ -49,7 +49,7 @@ case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[Strin
       .write
       .mode(SaveMode.Overwrite)
       .saveAsTable(tableName.table)
-    
+
     val tableSizeLong = sparkSession.sessionState.executePlan(table.logicalPlan)
       .optimizedPlan.stats.sizeInBytes.toLong
 
