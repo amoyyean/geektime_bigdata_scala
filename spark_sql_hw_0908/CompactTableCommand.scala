@@ -22,18 +22,18 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.types.StringType
 
-case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[String])
-  extends LeafRunnableCommand {
+case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[String]) extends
+  LeafRunnableCommand {
 
   override val output: Seq[Attribute] =
     Seq(AttributeReference("compact", StringType)())
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val table = sparkSession.table(tableName)
-
     val partitionNum = fileNum match {
-      case None => (sparkSession.sessionState.executePlan(table.logicalPlan).
-        optimizedPlan.stats.sizeInBytes >> 7).toInt
+      case None => (sparkSession.sessionState
+        .executePlan(table.logicalPlan)
+        .optimizedPlan.stats.sizeInBytes.toLong./(512.0)).ceil.toInt
       case Some(value) => value.toInt
     }
     val tablePartitionNum = Math.max(partitionNum, 1)
@@ -50,7 +50,7 @@ case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[Strin
       .mode(SaveMode.Overwrite)
       .saveAsTable(tableName.table)
 
-    sparkSession.sql(s"DROP TABLE $tempTableName;")
+    sparkSession.sql(s"DROP TABLE $tempTableName ;")
     Seq(Row(s"Compact table ${tableName.table} successfully"))
   }
 }
