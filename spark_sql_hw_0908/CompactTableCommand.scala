@@ -49,15 +49,12 @@ case class CompactTableCommand(tableName: TableIdentifier, fileNum: Option[Strin
       .write
       .mode(SaveMode.Overwrite)
       .saveAsTable(tableName.table)
-
-    val tableSize = sparkSession.sessionState.executePlan(table.logicalPlan)
-      .optimizedPlan.stats.sizeInBytes
-
+    
     val tableSizeLong = sparkSession.sessionState.executePlan(table.logicalPlan)
       .optimizedPlan.stats.sizeInBytes.toLong
 
     sparkSession.sql(s"DROP TABLE $tempTableName ;")
-    Seq(Row(s"Compact table ${tableName.table} of ${tableSize} and ${tableSizeLong} " +
+    Seq(Row(s"Compact table ${tableName.table} of ${tableSizeLong} byte size " +
       s"successfully with ${tablePartitionNum} partitions"))
   }
 }
