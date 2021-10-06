@@ -1,3 +1,10 @@
+### Logical Plan的修改方法
+
+可以参考[MyInsertOptimizerExtension](https://github.com/amoyyean/SparkMyOptimizerExtension/blob/master/src/main/scala/com/geektime/linyan/MyInsertOptimizerExtension.scala)和[RepartitionForInsertion](https://github.com/amoyyean/SparkMyOptimizerExtension/blob/master/src/main/scala/com/geektime/linyan/RepartitionForInsertion.scala)中的代码。
+
+
+### Spark Plan的修改方法
+
 生成1个SparkMyStrategyExtension.scala文件，内容如下
 
 package com.geektime.linyan
@@ -17,14 +24,13 @@ class SparkMyStrategyExtension extends (SparkSessionExtensions => Unit) {
 package com.geektime.linyan
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.{ColumnarRule, SparkPlan}
+import org.apache.spark.sql.execution.{CoalesceExec, SparkPlan}
 
 object RepartitionForInsertion extends Rule[SparkPlan] {
 override def apply(plan: SparkPlan): SparkPlan = {
 plan transformDown {
-case i @ InsertIntoDataSourceExec(child, _, _, partitionColumns, _)
-val newChild = child.repartition(partitionColumns.map(col): _*)
-i.withNewChildren(newChild :: Nil)
+case i: insertdatasource的Spark Plan的对象名称待确认
+i.withNewChildren(CoalesceExec(1, plan))
 }
 }
 }
