@@ -29,8 +29,10 @@ import org.apache.spark.sql.execution.{CoalesceExec, SparkPlan}
 object RepartitionForInsertion extends Rule[SparkPlan] {
 override def apply(plan: SparkPlan): SparkPlan = {
 plan transformDown {
-case i: insertdatasource的Spark Plan的对象名称待确认
-i.withNewChildren(CoalesceExec(1, plan))
+case i: DataWritingCommand =>
+i.withNewChildren(CoalesceExec(1, planLater(plan)))
+DataWritingCommandExec(i, planLater(plan))
+
 }
 }
 }
