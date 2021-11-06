@@ -1,3 +1,30 @@
+# 作业2 实现Compact Table command
+
+- 要求:
+添加compact table命令，用于合并小文件，例如表test1总共有50000个文件，
+每个1MB，通过该命令，合成为500个文件，每个约100MB。
+- 语法:
+```sql
+COMPACT TABLE table_identify [partitionSpec] [INTO fileNum FILES];
+```
+- 说明：
+1. 如果添加partitionSpec，则只合并指定的partition目录的文件。
+2. 如果不加into fileNum files，则把表中的文件合并成128MB大小。
+3. 以上两个算附加要求，基本要求只需要完成以下功能:
+```sql
+COMPACT TABLE test1 INTO 500 FILES;
+```
+
+## 代码参考
+
+SqlBase.g4:
+```SqlBase.g4
+| COMPACT TABLE target=tableIdentifier partitionSpec?
+(INTO fileNum=INTEGER_VALUE identifier)? #compactTable
+```
+
+## 自己的解答
+
 根据[AnalyzeTableCommand和LogicalPlanStats的说明](https://blog.csdn.net/wankunde/article/details/103623897)有2种不同的计算Table大小的方式
 1. CommandUtils.calculateTotalSize(sparkSession, tableMeta)
 2. LogicalPlanStats
@@ -21,3 +48,85 @@ spark.sessionState.executePlan(df.queryExecution.logical).optimizedPlan.stats.si
 ![compactTableSQLCommandandResult](compactTableSQLCommandandResult.png)
 
 ![compactTableSQLCommandandResult2](compactTableSQLCommandandResult2.png)
+
+---
+
+## 助教-(张)彦功回答 2021/10/23
+
+和课堂上讲的"SHOW MYUSER"和之前1次的作业(0829作业第3题)类似。实现可以参考0829课程《逻辑计划树和优化器、物理计划树和策略器》回放00:08分到00:25分的内容。我自己印象是5分不到开始，40分左右又演示了程序编译(build)后spark sql的操作效果
+
+- 在 SqlBase.g4 增加 Compact Table 命令
+- 在 SparkSqlParser.scala 增加 vistCompactTable 方法
+- 在 commdand 目录下的 tables.scala (助教选择，也可以新建scala文件)增加 CompactTableCommand 类
+
+参考文章：[overwrite](https://stackoverflow.com/questions/38487667/overwrite-specific-partitions-in-spark-dataframe-write-method)
+
+### 编译和调试步骤及测试代码
+
+1. 编译
+```shell
+./build/sbt package -Phive -Phive-thriftserver -DskipTests
+```
+或
+```shell
+./build/maven package -Phive -Phive-thriftserver -DskipTests
+```
+
+2. 运行
+
+```shell
+./bin/spark-sql
+```
+
+3. 添加表和数据, 在 spark-sql 命令中执行
+
+```SQL
+CREATE TABLE student (id BIGINT, name STRING) partitioned by (age INT) row format delimited fields terminated by ',' stored as textfile ;
+
+CREATE TABLE student (id INT, name STRING, age INT);
+
+CREATE TABLE student_2 (id INT, name STRING) partitioned by (age INT) row format delimited fields terminated by ',' stored as textfile ;
+CREATE TABLE student_2 (id INT, name STRING) partitioned by (age INT);
+
+set hive.exec.dynamic.partition = true;
+set hive.exec.dynamic.partition.mode = nonstrict;
+
+INSERT INTO student (id, name, age ) VALUES (1, 'a', 10);
+INSERT INTO student (id, name, age ) VALUES (2, 'a', 20);
+INSERT INTO student (id, name, age ) VALUES (3, 'a', 30);
+INSERT INTO student (id, name, age ) VALUES (4, 'a', 10);
+INSERT INTO student (id, name, age ) VALUES (5, 'a', 20);
+INSERT INTO student (id, name, age ) VALUES (6, 'a', 30);
+INSERT INTO student (id, name, age ) VALUES (7, 'a', 10);
+INSERT INTO student (id, name, age ) VALUES (8, 'a', 20);
+
+INSERT INTO student_2 (id, name, age ) VALUES (1, 'a', 10);
+INSERT INTO student_2 (id, name, age ) VALUES (2, 'a', 20);
+INSERT INTO student_2 (id, name, age ) VALUES (3, 'a', 30);
+INSERT INTO student_2 (id, name, age ) VALUES (4, 'a', 10);
+INSERT INTO student_2 (id, name, age ) VALUES (5, 'a', 20);
+INSERT INTO student_2 (id, name, age ) VALUES (6, 'a', 30);
+INSERT INTO student_2 (id, name, age ) VALUES (7, 'a', 10);
+INSERT INTO student_2 (id, name, age ) VALUES (8, 'a', 20);
+
+DESCRIBE TABLE FORMATTED student_2;
+
+SHOW PARTITIONS student_2;
+```
+
+spark-sql> SHOW PARTITIONS student_2;
+age=10
+age=20
+age=30
+
+```SQL
+COMPACT TABLE student_2 PARTITION(age=10) INTO 1 files;
+
+COMPACT TABLE student INTO 1 files;
+```
+
+运行和结果如下
+
+![compactTableSQLCommandandResult4_1](compactTableSQLCommandandResult4_1.png)
+
+![compactTableSQLCommandandResult4_2](compactTableSQLCommandandResult4_2.png)

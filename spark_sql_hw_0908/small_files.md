@@ -27,4 +27,21 @@ Repartition会产生shuffle，不会改变原来的输入的partition数量决�
 5. SPARK SQL运行INSERT命令时可以加入Hive样式的Coalesce或Repartition的提示(Hint)，让用户只写SQL也能实现Coalesce或Repartition。
 
 https://issues.apache.org/jira/browse/SPARK-24940
+
+---
+
+## 助教-(张)彦功回答 2021/10/23
+
+1. 对于原始数据按照分区字段进行shuffle (distribute by xyz)，可以规避小文件问题。但有可能引入数据倾斜的问题；可以通过distribute by ss_sold_date_sk, cast(rand() * N as int)，N值可以在文件数量和倾斜度之间做权衡；知道倾斜键的情况下，可以将原始数据分成几个部分处理，不倾斜的按照分区键shuffle，倾斜部分可以按照rand函数来shuffle。
+
+2. 通过repartition算子控制(RDD写入)最后的DataSet的分区数。
+
+3. 开启自适应查询执行(AQE)。
+对于Spark 2.4 以上版本的用户，也可以使用HINT 详情，链接：https://issues.apache.org/jira/browse/SPARK-24940
+
+对于Spark 3.0 以上版本的用户，可以使用自适应查询（AQE）功能，设置spark.sql.adaptive.enabled和spark.sql.adaptive.coalescePartitions.enabled为true，Spark就会在计算过程中自动帮助用户合并小文件，更加方便和智能。
+
+4. 定期合并历史数据(离线)。
+
+参考文章：[如何避免Spark SQL做数据导入时产生大量小文件](https://cloud.tencent.com/developer/article/1805731)
  
