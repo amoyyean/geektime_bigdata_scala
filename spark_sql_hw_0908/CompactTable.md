@@ -59,7 +59,8 @@ spark.sessionState.executePlan(df.queryExecution.logical).optimizedPlan.stats.si
 - 在 SparkSqlParser.scala 增加 vistCompactTable 方法
 - 在 commdand 目录下的 tables.scala (助教选择，也可以新建scala文件)增加 CompactTableCommand 类
 
-参考文章：[overwrite](https://stackoverflow.com/questions/38487667/overwrite-specific-partitions-in-spark-dataframe-write-method)
+参考文章：
+1. [Spark Specific Partition Overwrite through Dataframe 用来解决1个partition合并小文件后如何重新覆盖包含其他 partition(s) 的原表](https://stackoverflow.com/questions/38487667/overwrite-specific-partitions-in-spark-dataframe-write-method)
 
 ### 编译和调试步骤及测试代码
 
@@ -132,3 +133,16 @@ COMPACT TABLE student INTO 1 files;
 ![compactTableSQLCommandandResult4_2](compactTableSQLCommandandResult4_2.png)
 
 ![compactTableSQLCommandandResult4_3](compactTableSQLCommandandResult4_3.png)
+
+![compactTableSQLCommandandResult4_4](compactTableSQLCommandandResult4_4.png)
+
+--
+
+## 老师在1027课程中介绍的解决方法
+
+代码可以参考 2021/10/27 课程 Delta Lake详解（下）02:00:00到02:02:10的视频 
+
+Compact Table 命令:
+CompactCommand (exec) sideeffect.run(
+plan.(select) -> write -> partition？如果有partition，写到统一的临时目录 _temp -> rename(orginal renamed to _temp2, _temp renamed to original 担心操作有问题,把原始的表保存。如果中间操作失败就回滚，如果操作成功 _temp2 deleted)
+)
