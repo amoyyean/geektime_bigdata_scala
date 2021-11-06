@@ -66,7 +66,7 @@ case i: InsertIntoDatasource => i.withNewChildren(CoalesceExec(1, planLater(plan
 }
 ```
 
---
+---
 
 ## 助教-(张)彦功回答 2021/10/23
 
@@ -93,7 +93,7 @@ case i: InsertIntoDatasource => i.withNewChildren(CoalesceExec(1, planLater(plan
 参考文章：
 1. [Apache Hudi如何智能处理小文件问题](https://www.cnblogs.com/leesf456/p/14642991.html)。助教说由于太复杂未尝试Hudi的解决方法
 
---
+---
 
 ## 老师在 eBay INSERT INTO 自动合并小文件及写入数据时自动合并小文件的方法
 

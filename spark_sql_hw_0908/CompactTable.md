@@ -136,7 +136,7 @@ COMPACT TABLE student INTO 1 files;
 
 ![compactTableSQLCommandandResult4_4](compactTableSQLCommandandResult4_4.png)
 
---
+---
 
 ## 老师在1027课程中介绍的解决方法
 
