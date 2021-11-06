@@ -130,3 +130,5 @@ COMPACT TABLE student INTO 1 files;
 ![compactTableSQLCommandandResult4_1](compactTableSQLCommandandResult4_1.png)
 
 ![compactTableSQLCommandandResult4_2](compactTableSQLCommandandResult4_2.png)
+
+![compactTableSQLCommandandResult4_3](compactTableSQLCommandandResult4_3.png)
